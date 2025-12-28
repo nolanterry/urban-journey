@@ -1,0 +1,119 @@
+// Portal Brain Database Schema
+// Phase 1: Read-only, deterministic, auditable HubSpot portal understanding layer
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  created_at DateTime @default(now())
+
+  integrations HubspotIntegration[]
+  deals_raw    HsDealsRaw[]
+  deal_properties HsDealProperty[]
+  deal_pipelines HsDealPipeline[]
+  field_usage_stats FieldUsageStat[]
+  profile_runs ProfileRun[]
+
+  @@map("tenants")
+}
+
+model HubspotIntegration {
+  tenant_id            String   @id
+  portal_id            String
+  access_token_encrypted String
+  refresh_token_encrypted String
+  expires_at           DateTime?
+  scopes               Json     // Array of scope strings
+  is_paused            Boolean  @default(false)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@map("hubspot_integrations")
+}
+
+model HsDealsRaw {
+  id         String   @id @default(uuid())
+  tenant_id  String
+  deal_id    String
+  payload_json Json
+  fetched_at DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, deal_id, fetched_at])
+  @@index([tenant_id, fetched_at])
+  @@map("hs_deals_raw")
+}
+
+model HsDealProperty {
+  tenant_id    String
+  property_name String
+  label        String
+  type         String
+  field_type   String
+  options_json Json?    // Nullable - contains options for select/picklist types
+  is_custom    Boolean
+  updated_at   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@id([tenant_id, property_name])
+  @@map("hs_deal_properties")
+}
+
+model HsDealPipeline {
+  tenant_id   String
+  pipeline_id String
+  name        String
+  stages_json Json     // Array of stage objects
+  updated_at  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@id([tenant_id, pipeline_id])
+  @@map("hs_deal_pipelines")
+}
+
+model FieldUsageStat {
+  id                   String   @id @default(uuid())
+  tenant_id            String
+  property_name        String
+  fill_rate            Decimal? // Percentage as decimal (0-1)
+  distinct_count       Int?
+  enum_entropy         Decimal? // For enum fields
+  last_seen_nonnull_at DateTime?
+  score                Decimal? // Future: computed score
+  tier                 String?  // A, B, or C
+  computed_at          DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, property_name, computed_at])
+  @@index([tenant_id, computed_at])
+  @@map("field_usage_stats")
+}
+
+model ProfileRun {
+  id           String   @id @default(uuid())
+  tenant_id    String
+  status       String   // 'running', 'success', 'failed'
+  started_at   DateTime @default(now())
+  finished_at  DateTime?
+  error_message String?
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, status, started_at])
+  @@index([tenant_id, started_at])
+  @@map("profile_runs")
+}
