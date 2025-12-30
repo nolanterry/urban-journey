@@ -2,6 +2,30 @@
 
 **Your single source of truth - everything is in this directory!**
 
+## 🚨 Git Workflow - CRITICAL
+
+**Local and remote repositories MUST always be in sync. Divergence is not acceptable.**
+
+A pre-push hook is installed that **automatically prevents** pushes when branches have diverged. 
+
+**Always follow this workflow:**
+```bash
+# Before starting work
+git pull origin portal-brain-v1
+
+# After making changes
+git add .
+git commit -m "Description"
+git push origin portal-brain-v1
+```
+
+**Check sync status:**
+```bash
+npm run git:sync-check
+```
+
+See `GIT_WORKFLOW.md` for detailed workflow guidelines.
+
 ## Quick Start
 
 ```bash

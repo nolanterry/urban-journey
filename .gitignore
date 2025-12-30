@@ -38,3 +38,6 @@ next-env.d.ts
 
 # Prisma
 prisma/migrations/
+
+# Git hooks are local only (not committed)
+# .git/hooks/ is not tracked by git, which is correct
